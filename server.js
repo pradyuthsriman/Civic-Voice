@@ -1,133 +1,128 @@
 const express = require('express');
-const cors = require('cors');
+const bodyParser = require('body-parser');
 const multer = require('multer');
-const path = require('path');
+const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
-// The updated line: uses the environment port or defaults to 3000
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(bodyParser.json());
 
-// Storage setup for Multer
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath);
-        }
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage: storage });
+// Tell Express to serve files from the current directory
+app.use(express.static(__dirname));
 
-// In-memory data storage (for simplicity)
-let issues = [];
-let users = {};
+const issuesFilePath = path.join(__dirname, 'issues.json');
+const approvedFilePath = path.join(__dirname, 'approved.json');
 
-// Helper function to find a user by ID
-function findUser(userId) {
-    return Object.values(users).find(u => u.id === userId);
-}
+const upload = multer({ dest: 'uploads/' });
 
-// Routes
-app.post('/register', (req, res) => {
-    const { username } = req.body;
-    if (!username) {
-        return res.status(400).json({ message: 'Username is required' });
-    }
-    
-    // Simple check to ensure username is unique
-    const existingUser = Object.values(users).find(u => u.username === username);
-    if (existingUser) {
-        return res.status(409).json({ message: 'Username already exists' });
-    }
-
-    const userId = 'user-' + Date.now();
-    users[userId] = { id: userId, username: username };
-    res.json({ message: 'User registered successfully', userId: userId });
-});
-
-app.post('/submit', upload.single('photo'), (req, res) => {
-    const { description, location, category } = req.body;
-    const photo = req.file ? req.file.filename : null;
+// API endpoint to report an issue
+app.post('/api/report', upload.single('image'), (req, res) => {
     const newIssue = {
-        id: 'issue-' + Date.now(),
-        description,
-        location,
-        category,
-        photo,
-        status: 'pending',
-        upvotes: 0,
-        downvotes: 0,
-        votedBy: []
+        id: Date.now(),
+        ...req.body,
+        image: req.file ? req.file.path : null,
+        status: 'pending'
     };
-    issues.push(newIssue);
-    res.json({ message: 'Issue submitted successfully', issue: newIssue });
+
+    fs.readFile(issuesFilePath, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read issues file' });
+        }
+        const issues = JSON.parse(data);
+        issues.push(newIssue);
+        fs.writeFile(issuesFilePath, JSON.stringify(issues, null, 2), (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Failed to write issues file' });
+            }
+            res.json({ message: 'Issue reported successfully!' });
+        });
+    });
 });
 
-app.get('/issues', (req, res) => {
-    const pendingIssues = issues.filter(issue => issue.status === 'pending');
-    res.json(pendingIssues);
+// API endpoint to get all issues
+app.get('/api/issues', (req, res) => {
+    fs.readFile(issuesFilePath, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read issues file' });
+        }
+        res.json(JSON.parse(data));
+    });
 });
 
-app.get('/approved', (req, res) => {
-    const approvedIssues = issues.filter(issue => issue.status === 'approved');
-    res.json(approvedIssues);
+// API endpoint to get approved issues
+app.get('/api/approved-issues', (req, res) => {
+    fs.readFile(approvedFilePath, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read approved issues file' });
+        }
+        res.json(JSON.parse(data));
+    });
 });
 
-app.post('/approve/:id', (req, res) => {
-    const { id } = req.params;
-    const issue = issues.find(i => i.id === id);
-    if (issue) {
-        issue.status = 'approved';
-        res.json({ message: 'Issue approved' });
-    } else {
-        res.status(404).json({ message: 'Issue not found' });
-    }
+// API endpoint to get a single issue by ID
+app.get('/api/issues/:id', (req, res) => {
+    fs.readFile(issuesFilePath, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read issues file' });
+        }
+        const issues = JSON.parse(data);
+        const issue = issues.find(i => i.id == req.params.id);
+        if (issue) {
+            res.json(issue);
+        } else {
+            res.status(404).json({ error: 'Issue not found' });
+        }
+    });
 });
 
-app.post('/reject/:id', (req, res) => {
-    const { id } = req.params;
-    const issueIndex = issues.findIndex(i => i.id === id);
-    if (issueIndex > -1) {
-        issues.splice(issueIndex, 1);
-        res.json({ message: 'Issue rejected and removed' });
-    } else {
-        res.status(404).json({ message: 'Issue not found' });
-    }
-});
+// API endpoint for moderator to approve or reject an issue
+app.post('/api/moderator/:id', (req, res) => {
+    const { status } = req.body;
+    fs.readFile(issuesFilePath, (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read issues file' });
+        }
+        let issues = JSON.parse(data);
+        const issueIndex = issues.findIndex(i => i.id == req.params.id);
 
-app.post('/vote/:id', (req, res) => {
-    const { id } = req.params;
-    const { voteType, userId } = req.body;
-    
-    const issue = issues.find(i => i.id === id);
-    const user = findUser(userId);
+        if (issueIndex === -1) {
+            return res.status(404).json({ error: 'Issue not found' });
+        }
 
-    if (!issue || !user) {
-        return res.status(404).json({ message: 'Issue or user not found' });
-    }
+        const issue = issues[issueIndex];
+        issue.status = status;
 
-    if (issue.votedBy.includes(userId)) {
-        return res.status(409).json({ message: 'You have already voted on this issue.' });
-    }
-
-    if (voteType === 'upvote') {
-        issue.upvotes++;
-    } else if (voteType === 'downvote') {
-        issue.downvotes++;
-    }
-    
-    issue.votedBy.push(userId);
-    res.json({ message: 'Vote recorded' });
+        if (status === 'approved') {
+            fs.readFile(approvedFilePath, (err, data) => {
+                const approvedIssues = err ? [] : JSON.parse(data);
+                approvedIssues.push(issue);
+                fs.writeFile(approvedFilePath, JSON.stringify(approvedIssues, null, 2), (err) => {
+                    if (err) return res.status(500).json({ error: 'Failed to write approved issues file' });
+                    // Remove from issues.json
+                    issues = issues.filter(i => i.id != req.params.id);
+                    fs.writeFile(issuesFilePath, JSON.stringify(issues, null, 2), (err) => {
+                        if (err) return res.status(500).json({ error: 'Failed to update issues file' });
+                        res.json({ message: 'Issue approved and moved to approved.json' });
+                    });
+                });
+            });
+        } else if (status === 'rejected') {
+            // Remove from issues.json
+            issues = issues.filter(i => i.id != req.params.id);
+            fs.writeFile(issuesFilePath, JSON.stringify(issues, null, 2), (err) => {
+                if (err) {
+                    return res.status(500).json({ error: 'Failed to update issues file' });
+                }
+                res.json({ message: 'Issue rejected and removed' });
+            });
+        } else {
+            res.status(400).json({ error: 'Invalid status' });
+        }
+    });
 });
 
 app.listen(PORT, () => {
