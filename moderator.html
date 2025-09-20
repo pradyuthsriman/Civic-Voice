@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Moderator Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #4CAF50;
+        --background-color: #f4f4f9;
+        --card-background: white;
+        --text-color: #333;
+        --border-color: #ddd;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        margin: 20px;
+        background: var(--background-color);
+        color: var(--text-color);
+    }
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    h1, h2 {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    .card {
+        background: var(--card-background);
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-bottom: 25px;
+    }
+    .issue-box {
+        background: #f9f9f9;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+    .issue-box img {
+        margin-top: 15px;
+        border-radius: 5px;
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+    button {
+        margin: 5px;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        font-weight: 500;
+    }
+    button.approve { background: #4CAF50; color: white; }
+    button.reject { background: #f44336; color: white; }
+    button.approve:hover { background: #388E3C; }
+    button.reject:hover { background: #D32F2F; }
+    #location-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    #location-controls input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Moderator Dashboard</h1>
+    <div class="card">
+        <h2>Detect Your Mandal</h2>
+        <div id="location-controls">
+            <input type="text" id="location" placeholder="Moderator Mandal" readonly>
+            <button type="button" onclick="getLocation()">📍 Detect</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>Pending Issues</h2>
+        <div id="pendingIssues"><p style="color: gray;">Press "Detect Mandal" to load pending issues.</p></div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://evil-clowns-kneel.loca.lt';
+    let moderatorMandal = "";
+
+    async function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                    const data = await res.json();
+                    moderatorMandal =
+                        data.address.state_district ||
+                        data.address.county ||
+                        data.address.suburb ||
+                        data.address.village ||
+                        data.address.town ||
+                        data.address.city || "Unknown";
+                    if (!moderatorMandal.toLowerCase().includes("mandal")) {
+                        moderatorMandal += " Mandal";
+                    }
+                    document.getElementById("location").value = moderatorMandal;
+                    loadIssues();
+                } catch(err) {
+                    document.getElementById("location").value = "Unknown";
+                    alert("Unable to detect Mandal properly.");
+                }
+            }, function(error) {
+                alert("Unable to detect location. Please enter manually.");
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    async function loadIssues() {
+        if (!moderatorMandal) return;
+        try {
+            const res = await fetch(`${API_URL}/issues`);
+            const issues = await res.json();
+            const container = document.getElementById('pendingIssues');
+            container.innerHTML = "";
+            const filteredIssues = issues.filter(issue => issue.location.toLowerCase() === moderatorMandal.toLowerCase());
+
+            if (filteredIssues.length === 0) {
+                container.innerHTML = "<p>No pending issues in your Mandal.</p>";
+                return;
+            }
+            filteredIssues.forEach(issue => {
+                const div = document.createElement("div");
+                div.classList.add("issue-box");
+                div.innerHTML = `
+                    <p><b>Description:</b> ${issue.description}</p>
+                    <p><b>Location:</b> ${issue.location}</p>
+                    <p><b>Category:</b> ${issue.category}</p>
+                    ${issue.photo ? `<img src="${API_URL}/uploads/${issue.photo}" alt="Issue Photo">` : ""}
+                    <br>
+                    <button class="approve" onclick="approveIssue('${issue.id}')">✅ Approve</button>
+                    <button class="reject" onclick="rejectIssue('${issue.id}')">❌ Reject</button>
+                `;
+                container.appendChild(div);
+            });
+        } catch(err) {
+            alert("Cannot load issues. Make sure backend is running.");
+        }
+    }
+
+    async function approveIssue(id) {
+        try {
+            const res = await fetch(`${API_URL}/approve/${id}`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            loadIssues();
+        } catch(err) {
+            alert("Cannot approve issue.");
+        }
+    }
+
+    async function rejectIssue(id) {
+        try {
+            const res = await fetch(`${API_URL}/reject/${id}`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            loadIssues();
+        } catch(err) {
+            alert("Cannot reject issue.");
+        }
+    }
+</script>
+</body>
+</html>

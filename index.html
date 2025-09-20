@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Civic Voice</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #4CAF50;
+        --background-color: #f0f2f5;
+        --card-background: #ffffff;
+        --text-color: #333333;
+        --border-color: #e0e0e0;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--background-color);
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+    }
+    .container {
+        max-width: 800px;
+        width: 100%;
+        margin-top: 50px;
+    }
+    h1, h2 {
+        color: var(--primary-color);
+        font-weight: 700;
+        text-align: center;
+        margin-top: 0;
+    }
+    p {
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: 400;
+    }
+    .card {
+        background: var(--card-background);
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 30px;
+    }
+    /* Landing & Registration Page */
+    #registrationPage, #mainAppPage {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 80vh;
+        text-align: center;
+        transition: opacity 0.5s ease-in-out;
+        padding: 20px;
+    }
+    .main-title {
+        font-size: 3rem;
+        font-weight: 700;
+    }
+    .subtitle {
+        font-size: 1.2rem;
+    }
+    .landing-options {
+        margin-top: 40px;
+    }
+    .landing-options button, #registerBtn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        margin: 10px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+    .landing-options button:hover, #registerBtn:hover {
+        background-color: #388E3C;
+        transform: translateY(-2px);
+    }
+    #usernameInput {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        margin-top: 20px;
+        width: 300px;
+    }
+    /* Common Form & Feed Styles */
+    .section-container {
+        display: none;
+        padding: 20px 0;
+    }
+    .back-button {
+        background: #ccc;
+        color: var(--text-color);
+        padding: 8px 15px;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+    .location-btn-container {
+        display: flex;
+        width: 100%;
+        max-width: 400px;
+        align-items: center;
+    }
+    .location-btn-container input {
+        flex-grow: 1;
+        margin-right: 5px;
+    }
+    .location-btn-container button {
+        width: auto;
+        padding: 0 15px;
+        height: 44px;
+    }
+    input[type="text"], select {
+        width: 100%;
+        max-width: 400px;
+        padding: 12px;
+        margin: 8px 0;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+    }
+    #camera {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 8px;
+        border: 1px dashed var(--border-color);
+        background-color: #f5f5f5;
+    }
+    #photoPreview {
+        max-width: 100%;
+        max-height: 250px;
+        border-radius: 8px;
+        display: none;
+        margin-top: 15px;
+        border: 1px solid var(--border-color);
+    }
+    .issue {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        background: var(--card-background);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    .issue img {
+        width: 100%;
+        max-width: 300px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    .voting-controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .voting-controls button {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        width: auto;
+        background: #f0f2f5;
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        transition: background-color 0.2s;
+    }
+    .voting-controls button:hover {
+        background: #e0e0e0;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div id="registrationPage">
+        <h1 class="main-title">Civic Voice</h1>
+        <p class="subtitle">Please enter a username to register.</p>
+        <input type="text" id="usernameInput" placeholder="Enter your username">
+        <button id="registerBtn" onclick="registerUser()">Register</button>
+    </div>
+
+    <div id="mainAppPage" style="display: none;">
+        <h1 class="main-title">Civic Voice</h1>
+        <p class="subtitle">Welcome, <span id="userNameDisplay">User</span>!</p>
+        <div class="landing-options">
+            <button onclick="showPage('submitIssuePage')">Upload an Issue</button>
+            <button onclick="showPage('issuesFeedPage')">View Issue Feed</button>
+        </div>
+    </div>
+
+    <div id="submitIssuePage" class="section-container">
+        <button class="back-button" onclick="showPage('mainAppPage')">← Back</button>
+        <div class="card">
+            <h2>Report a Civic Issue</h2>
+            <form id="issueForm">
+                <input type="text" id="description" placeholder="Describe the issue" required>
+                
+                <div class="location-btn-container">
+                    <input type="text" id="location" placeholder="Your Mandal" readonly required>
+                    <button type="button" onclick="getLocation()">📍</button>
+                </div>
+                
+                <select id="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Road">Road</option>
+                    <option value="Garbage">Garbage</option>
+                    <option value="Water">Water</option>
+                    <option value="Electricity">Electricity</option>
+                </select>
+                
+                <video id="camera" autoplay></video>
+                <div class="capture-btn-container">
+                    <button type="button" onclick="capturePhoto()">📸 Capture Photo</button>
+                </div>
+                <canvas id="photoCanvas" style="display:none;"></canvas>
+                <img id="photoPreview" alt="Photo Preview">
+
+                <button type="submit">Submit Issue</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="issuesFeedPage" class="section-container">
+        <button class="back-button" onclick="showPage('mainAppPage')">← Back</button>
+        <div class="card">
+            <h2>Approved Issues Feed</h2>
+            <div id="issuesFeed"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'https://evil-clowns-kneel.loca.lt';
+
+    const form = document.getElementById('issueForm');
+    const feed = document.getElementById('issuesFeed');
+    const photoPreview = document.getElementById('photoPreview');
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('photoCanvas');
+
+    let currentUser = null;
+    const pages = {
+        registrationPage: document.getElementById('registrationPage'),
+        mainAppPage: document.getElementById('mainAppPage'),
+        submitIssuePage: document.getElementById('submitIssuePage'),
+        issuesFeedPage: document.getElementById('issuesFeedPage')
+    };
+
+    function showPage(pageId) {
+        for (const id in pages) {
+            pages[id].style.display = (id === pageId) ? 'flex' : 'none';
+        }
+        if (pageId === 'issuesFeedPage') {
+            loadApproved();
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        showPage('registrationPage');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { console.error("Camera access denied:", err); });
+    });
+
+    async function registerUser() {
+        const username = document.getElementById('usernameInput').value;
+        if (!username) {
+            alert("Please enter a username.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                currentUser = result.userId;
+                document.getElementById('userNameDisplay').textContent = username;
+                showPage('mainAppPage');
+            } else {
+                alert(result.message);
+            }
+        } catch (err) {
+            alert("Registration failed. Make sure the backend is running.");
+        }
+    }
+
+    function capturePhoto() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        photoPreview.src = canvas.toDataURL('image/png');
+        photoPreview.style.display = "block";
+    }
+
+    let userMandal = "";
+    async function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                    const data = await res.json();
+                    let mandal = data.address.state_district ||
+                                 data.address.county ||
+                                 data.address.suburb ||
+                                 data.address.village ||
+                                 data.address.town ||
+                                 data.address.city || "Unknown";
+                    if (!mandal.toLowerCase().includes("mandal")) mandal += " Mandal";
+                    userMandal = mandal;
+                    document.getElementById('location').value = userMandal;
+                } catch(err) {
+                    document.getElementById('location').value = "Unknown";
+                    alert("Unable to detect Mandal.");
+                }
+            }, function(error) {
+                alert("Unable to detect location. Please enter manually.");
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const desc = document.getElementById('description').value;
+        const loc = document.getElementById('location').value;
+        const cat = document.getElementById('category').value;
+        
+        if (photoPreview.style.display === "none") {
+            alert("Please capture a photo before submitting.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('description', desc);
+        formData.append('location', loc);
+        formData.append('category', cat);
+        const blob = await (await fetch(photoPreview.src)).blob();
+        formData.append('photo', blob, 'photo.png');
+
+        try {
+            const response = await fetch(`${API_URL}/submit`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            alert("Issue submitted successfully. Awaiting moderator approval.");
+            form.reset();
+            photoPreview.style.display = "none";
+            showPage('mainAppPage');
+        } catch (err) {
+            alert("Failed to submit issue. Make sure the backend is running.");
+        }
+    });
+
+    async function loadApproved() {
+        feed.innerHTML = '';
+        try {
+            const response = await fetch(`${API_URL}/approved`);
+            let issues = await response.json();
+            
+            issues.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
+
+            if (issues.length === 0) {
+                feed.innerHTML = "<p style='text-align: center; color: gray;'>No approved issues yet.</p>";
+                return;
+            }
+            issues.forEach(issue => {
+                let imgHTML = issue.photo ? `<img src="${API_URL}/uploads/${issue.photo}" alt="Issue Photo">` : '';
+                feed.innerHTML += `<div class="issue">
+                    <strong>${issue.location}</strong> [${issue.category}]: ${issue.description}
+                    ${imgHTML}
+                    <div class="voting-controls">
+                        <button onclick="vote('${issue.id}', 'upvote')">👍 Upvote (${issue.upvotes})</button>
+                        <button onclick="vote('${issue.id}', 'downvote')">👎 Downvote (${issue.downvotes})</button>
+                    </div>
+                </div>`;
+            });
+        } catch(err) {
+            console.log("Cannot load approved issues.");
+        }
+    }
+
+    async function vote(id, voteType) {
+        if (!currentUser) {
+            alert("Please register to vote.");
+            return;
+        }
+        try {
+            const response = await fetch(`${API_URL}/vote/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ voteType, userId: currentUser })
+            });
+            const result = await response.json();
+            alert(result.message);
+            loadApproved();
+        } catch (err) {
+            alert("Failed to vote. Please check your connection.");
+        }
+    }
+</script>
+</body>
+</html>
