@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,7 +21,7 @@ const usersFilePath = path.join(__dirname, 'users.json');
 
 const upload = multer({ dest: 'uploads/' });
 
-// NEW API endpoint for user registration
+// API endpoint for user registration
 app.post('/api/register', (req, res) => {
     const { username, email, phone } = req.body;
     
@@ -34,7 +35,7 @@ app.post('/api/register', (req, res) => {
         }
 
         const newUser = {
-            id: Date.now(),
+            id: Date.now().toString(), // Use toString() to ensure a string ID
             username,
             email,
             phone
@@ -51,11 +52,16 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// API endpoint to report an issue
+// API endpoint to report an issue - now expects userId
 app.post('/api/report', upload.single('image'), (req, res) => {
+    const { description, location, category, userId } = req.body;
+    
     const newIssue = {
         id: Date.now(),
-        ...req.body,
+        description,
+        location,
+        category,
+        userId: userId, // Add the userId to the issue object
         image: req.file ? req.file.path : null,
         status: 'pending'
     };
@@ -85,13 +91,35 @@ app.get('/api/issues', (req, res) => {
     });
 });
 
-// API endpoint to get approved issues
+// API endpoint to get approved issues - now includes reporter's username
 app.get('/api/approved-issues', (req, res) => {
-    fs.readFile(approvedFilePath, (err, data) => {
+    fs.readFile(approvedFilePath, (err, issuesData) => {
         if (err) {
             return res.status(500).json({ error: 'Failed to read approved issues file' });
         }
-        res.json(JSON.parse(data));
+        const issues = JSON.parse(issuesData);
+        
+        fs.readFile(usersFilePath, (err, usersData) => {
+            if (err) {
+                // Return issues without usernames if user data is unavailable
+                console.error("Failed to read users file:", err);
+                return res.json(issues);
+            }
+            const users = JSON.parse(usersData);
+            const usersMap = {};
+            users.forEach(user => {
+                usersMap[user.id] = user.username;
+            });
+
+            const issuesWithUsernames = issues.map(issue => {
+                return {
+                    ...issue,
+                    username: usersMap[issue.userId] || 'Anonymous'
+                };
+            });
+            
+            res.json(issuesWithUsernames);
+        });
     });
 });
 
