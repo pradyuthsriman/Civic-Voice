@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/moderator.html",
+      "destination": "/moderator.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/server.js"
     }
