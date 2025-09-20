@@ -16,8 +16,40 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const issuesFilePath = path.join(__dirname, 'issues.json');
 const approvedFilePath = path.join(__dirname, 'approved.json');
+const usersFilePath = path.join(__dirname, 'users.json');
 
 const upload = multer({ dest: 'uploads/' });
+
+// NEW API endpoint for user registration
+app.post('/api/register', (req, res) => {
+    const { username, email, phone } = req.body;
+    
+    fs.readFile(usersFilePath, (err, data) => {
+        const users = err ? [] : JSON.parse(data);
+        
+        // Check for existing user
+        const userExists = users.some(user => user.username === username || user.email === email);
+        if (userExists) {
+            return res.status(409).json({ message: 'Username or email already exists.' });
+        }
+
+        const newUser = {
+            id: Date.now(),
+            username,
+            email,
+            phone
+        };
+        users.push(newUser);
+
+        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ message: 'Failed to save user data.' });
+            }
+            res.status(201).json({ message: 'User registered successfully!', userId: newUser.id });
+        });
+    });
+});
 
 // API endpoint to report an issue
 app.post('/api/report', upload.single('image'), (req, res) => {
