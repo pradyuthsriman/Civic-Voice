@@ -1,0 +1,12 @@
+{
+  "name": "civic-voice",
+  "version": "1.0.0",
+  "description": "A civic-voice application for reporting issues.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
